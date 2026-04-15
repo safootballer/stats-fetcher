@@ -1,0 +1,66 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model League {
+  id             Int     @id @default(autoincrement())
+  grade_id       String  @unique @db.VarChar(255)
+  grade_name     String? @db.VarChar(255)
+  season         String? @db.VarChar(255)
+  url            String? @db.Text
+  added_by       String? @db.VarChar(255)
+  added_at       String? @db.VarChar(255)
+  last_synced_at String? @db.VarChar(255)
+  sync_enabled   Int?    @default(1)
+
+  @@map("leagues")
+}
+
+model PlayerGame {
+  id               Int     @id @default(autoincrement())
+  grade_id         String? @db.VarChar(255)
+  grade_name       String? @db.VarChar(255)
+  season           String? @db.VarChar(255)
+  round_number     Int?
+  round_name       String? @db.VarChar(255)
+  game_id          String? @db.VarChar(255)
+  game_date        String? @db.VarChar(255)
+  team_id          String? @db.VarChar(255)
+  team_name        String? @db.VarChar(255)
+  opponent_name    String? @db.VarChar(255)
+  player_id        String? @db.VarChar(255)
+  player_name      String? @db.VarChar(255)
+  player_number    String? @db.VarChar(50)
+  goals            Int?    @default(0)
+  behinds          Int?    @default(0)
+  best_player_rank Int?    @default(0)
+  synced_at        String? @db.VarChar(255)
+
+  @@map("player_games")
+}
+
+model PlayerProfile {
+  id          Int     @id @default(autoincrement())
+  player_id   String  @unique @db.VarChar(255)
+  player_name String? @db.VarChar(255)
+  fetched_at  String? @db.VarChar(255)
+
+  @@map("player_profiles")
+}
+
+model User {
+  id            Int     @id @default(autoincrement())
+  username      String  @unique @db.VarChar(255)
+  password_hash String  @db.VarChar(255)
+  role          String  @db.VarChar(50)
+  created_at    String? @db.VarChar(255)
+  last_login    String? @db.VarChar(255)
+
+  @@map("users")
+}

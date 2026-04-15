@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: safie-stats
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install --legacy-peer-deps && npx prisma generate && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXTAUTH_URL
+        sync: false
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: CRON_SECRET
+        generateValue: true
+      - key: PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING
+        value: "1"
