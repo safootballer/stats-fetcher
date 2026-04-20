@@ -12,12 +12,11 @@ export async function GET(req: NextRequest) {
   const gradeId = searchParams.get('gradeId')
 
   if (type === 'leagues') {
-    const leagues = await prisma.league.findMany({
-      where: { sync_enabled: { not: 0 } },
-      orderBy: { grade_name: 'asc' },
-    })
-    return NextResponse.json(leagues)
-  }
+  const leagues = await prisma.league.findMany({
+    orderBy: { grade_name: 'asc' },
+  })
+  return NextResponse.json(leagues)
+}
 
   if (!gradeId) return NextResponse.json({ error: 'gradeId required' }, { status: 400 })
 

@@ -15,6 +15,11 @@ export function Sidebar({ user }: { user: any }) {
 
   useEffect(() => { loadLeagues() }, [])
 
+  useEffect(() => {
+    window.addEventListener('stats:synced', loadLeagues)
+    return () => window.removeEventListener('stats:synced', loadLeagues)
+  }, [])
+
   async function syncAll() {
     setSyncing('all'); setMsg(null)
     const res  = await fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
@@ -26,84 +31,122 @@ export function Sidebar({ user }: { user: any }) {
     window.dispatchEvent(new Event('stats:synced'))
   }
 
-  async function syncOne(gradeId: string, gradeName: string) {
-    setSyncing(gradeId); setMsg(null)
-    const res  = await fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ gradeId }) })
-    const data = await res.json()
-    setSyncing(null)
-    const r = data.results?.[0]
-    setMsg({ type: r?.success ? 'success' : 'error', text: r?.message ?? 'Done' })
-    window.dispatchEvent(new Event('stats:synced'))
-  }
-
   return (
     <aside style={{
-      width: 250, flexShrink: 0, background: '#000',
-      borderRight: '1px solid rgba(44,163,238,0.2)',
-      minHeight: '100vh', display: 'flex', flexDirection: 'column',
-      padding: '1.25rem 1rem', gap: '0.5rem',
+      width: 260, flexShrink: 0,
+      background: '#000',
+      borderRight: '3px solid #2ca3ee',
+      minHeight: '100vh',
+      display: 'flex', flexDirection: 'column',
+      padding: '1.5rem 1rem',
+      gap: '1rem',
       position: 'sticky', top: 0, height: '100vh', overflowY: 'auto',
     }}>
-      {/* Brand */}
-      <div style={{ textAlign: 'center', padding: '0.5rem 0 1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.625rem', marginBottom: '0.625rem' }}>
-          <img src="/logo2.png" alt="" style={{ height: 32 }} onError={e => (e.currentTarget.style.display='none')} />
-          <img src="/logo.png"  alt="" style={{ height: 32 }} onError={e => (e.currentTarget.style.display='none')} />
-        </div>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: '1.2rem', color: '#2ca3ee' }}>Player Stats</div>
-        <span className="badge-yellow" style={{ fontSize: '0.58rem', marginTop: 3, display: 'inline-block' }}>SA Footballer</span>
+
+      {/* Logos */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+        <img src="/logo2.png" alt="SAFie" height={40} onError={e => (e.currentTarget.style.display='none')} />
+        <img src="/logo.png" alt="SA Footballer" height={40} onError={e => (e.currentTarget.style.display='none')} />
       </div>
 
-      <div style={{ height: 1, background: 'rgba(44,163,238,0.2)' }} />
+      {/* Brand */}
+      <div style={{ textAlign: 'center' }}>
+        <span style={{ display: 'block', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: '1.3rem', color: '#2ca3ee' }}>
+          Player Stats
+        </span>
+        <span style={{ display: 'block', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#e6fe00' }}>
+          SA Footballer
+        </span>
+      </div>
+
+      <hr style={{ borderColor: '#2ca3ee', opacity: 0.35 }} />
 
       {/* User */}
-      <div style={{ padding: '0.625rem', borderRadius: 9, background: 'rgba(44,163,238,0.05)', border: '1px solid rgba(44,163,238,0.15)' }}>
-        <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Signed in</div>
-        <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{user?.name}</div>
-        <div style={{ fontSize: '0.72rem', color: '#2ca3ee' }}>{(user?.role ?? 'user').toUpperCase()}</div>
+      <div>
+        <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#2ca3ee', borderBottom: '2px solid #2ca3ee', paddingBottom: 4, marginBottom: 8 }}>
+          User Profile
+        </p>
+        <p style={{ fontSize: '0.875rem', color: '#fff' }}>
+          <span style={{ opacity: 0.6 }}>Name: </span>{user?.name ?? '-'}
+        </p>
+        <p style={{ fontSize: '0.875rem', color: '#fff', marginTop: 4 }}>
+          <span style={{ opacity: 0.6 }}>Role: </span>{(user?.role ?? 'user').toUpperCase()}
+        </p>
       </div>
+
+      <hr style={{ borderColor: '#2ca3ee', opacity: 0.35 }} />
 
       {/* Admin sync */}
       {isAdmin && (
-        <>
-          <div style={{ height: 1, background: 'rgba(44,163,238,0.15)' }} />
-          <div>
-            <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>Sync</p>
-            <button onClick={syncAll} disabled={syncing !== null} className="btn-primary" style={{ width: '100%', fontSize: '0.82rem', padding: '0.6rem', marginBottom: '0.5rem' }}>
-              {syncing === 'all' ? 'Syncing...' : 'Sync All Leagues'}
-            </button>
-            {leagues.map(lg => (
-              <button key={lg.grade_id} onClick={() => syncOne(lg.grade_id, lg.grade_name)} disabled={syncing !== null}
-                className="btn-ghost" style={{ width: '100%', fontSize: '0.72rem', padding: '0.35rem 0.5rem', marginBottom: '0.25rem', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {syncing === lg.grade_id ? '...' : `Sync ${lg.grade_name?.slice(0, 28)}`}
-              </button>
-            ))}
-          </div>
+        <div>
+          <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#2ca3ee', borderBottom: '2px solid #2ca3ee', paddingBottom: 4, marginBottom: 8 }}>
+            Sync
+          </p>
+          <button
+            onClick={syncAll}
+            disabled={syncing !== null}
+            style={{
+              width: '100%', background: syncing ? 'rgba(44,163,238,0.3)' : 'linear-gradient(135deg,#2ca3ee,#00b8f1)',
+              color: '#fff', border: 'none', borderRadius: 10,
+              padding: '0.7rem', fontFamily: "'Barlow Condensed', sans-serif",
+              fontWeight: 700, fontSize: '0.9rem', letterSpacing: '0.06em',
+              textTransform: 'uppercase', cursor: syncing ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {syncing === 'all' ? 'Syncing...' : 'Sync All Leagues'}
+          </button>
+
           {msg && (
-            <div className={msg.type === 'success' ? 'alert-success' : 'alert-error'} style={{ fontSize: '0.78rem', padding: '0.5rem 0.75rem' }}>
+            <div style={{
+              marginTop: 8, padding: '0.5rem 0.75rem', borderRadius: 8, fontSize: '0.8rem',
+              background: msg.type === 'success' ? 'rgba(5,46,22,0.8)' : 'rgba(45,0,0,0.8)',
+              border: `1px solid ${msg.type === 'success' ? '#4ade80' : '#f87171'}`,
+              color: msg.type === 'success' ? '#4ade80' : '#f87171',
+            }}>
               {msg.text}
             </div>
           )}
-        </>
+        </div>
       )}
 
-      <div style={{ height: 1, background: 'rgba(44,163,238,0.15)' }} />
+      <hr style={{ borderColor: '#2ca3ee', opacity: 0.35 }} />
 
       {/* Leagues list */}
-      <div>
-        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.625rem' }}>Leagues</p>
+      <div style={{ flex: 1 }}>
+        <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#2ca3ee', borderBottom: '2px solid #2ca3ee', paddingBottom: 4, marginBottom: 8 }}>
+          Leagues ({leagues.length})
+        </p>
+        {leagues.length === 0 && (
+          <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>No leagues configured</p>
+        )}
         {leagues.map(lg => (
-          <div key={lg.id} style={{ marginBottom: '0.375rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(44,163,238,0.04)', border: '1px solid rgba(44,163,238,0.1)' }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lg.grade_name}</div>
-            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{lg.season}</div>
+          <div key={lg.id} style={{
+            padding: '0.5rem 0.75rem', borderRadius: 8, marginBottom: 4,
+            background: 'rgba(44,163,238,0.06)', border: '1px solid rgba(44,163,238,0.2)',
+          }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {lg.sync_enabled ? '🟢' : '🔴'} {lg.grade_name}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+              {lg.season} · {lg.last_synced_at?.slice(0, 10) ?? 'Never synced'}
+            </div>
           </div>
         ))}
-        {!leagues.length && <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)' }}>No leagues configured</p>}
       </div>
 
-      <div style={{ flex: 1 }} />
-      <div style={{ height: 1, background: 'rgba(44,163,238,0.2)' }} />
-      <button onClick={() => signOut({ callbackUrl: '/login' })} className="btn-yellow" style={{ width: '100%', fontSize: '0.82rem', padding: '0.6rem' }}>
+      <hr style={{ borderColor: '#2ca3ee', opacity: 0.35 }} />
+
+      {/* Logout */}
+      <button
+        onClick={() => signOut({ callbackUrl: '/login' })}
+        style={{
+          width: '100%', background: '#e6fe00', color: '#000',
+          border: 'none', borderRadius: 10, padding: '0.7rem',
+          fontFamily: "'Barlow Condensed', sans-serif",
+          fontWeight: 800, fontSize: '0.9rem', letterSpacing: '0.06em',
+          textTransform: 'uppercase', cursor: 'pointer',
+        }}
+      >
         Logout
       </button>
     </aside>
