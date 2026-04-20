@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   if (type === 'leagues') {
     const leagues = await prisma.league.findMany({
-      where: { sync_enabled: 1 },
+      where: { sync_enabled: { not: 0 } },
       orderBy: { grade_name: 'asc' },
     })
     return NextResponse.json(leagues)
@@ -22,15 +22,9 @@ export async function GET(req: NextRequest) {
   if (!gradeId) return NextResponse.json({ error: 'gradeId required' }, { status: 400 })
 
   if (type === 'season') {
-    // Each player has ONE row per grade (season totals from gradePlayerStatistics API)
-    // goals = season total goals (GOAL_COUNT from PlayHQ)
-    // best_player_rank = season total BP awards (BEST_PLAYER from PlayHQ)
-    // player_number = ranking on PlayHQ leaderboard
-    // We store games (APPEARANCE) in a separate field — use behinds column as games workaround
-    // Actually: we stored games count in best_player_rank? No.
-    // The syncGradeStats stores: goals=GOAL_COUNT, best_player_rank=BP count, player_number=ranking
-    // Games played is NOT stored separately — we need to add it
-    // For now use MAX on all fields since one row per player
+    // goals = GOAL_COUNT from PlayHQ
+    // games = APPEARANCE from PlayHQ (stored in behinds column)
+    // bp    = BEST_PLAYER count from PlayHQ (stored in best_player_rank)
     const raw = await prisma.$queryRaw`
       SELECT
         player_id,

@@ -10,7 +10,8 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
   useEffect(() => {
     setLoading(true)
     fetch(`/api/stats?type=season&gradeId=${gradeId}`)
-      .then(r => r.json()).then(d => setData(Array.isArray(d) ? d : []))
+      .then(r => r.json())
+      .then(d => setData(Array.isArray(d) ? d : []))
       .finally(() => setLoading(false))
   }, [gradeId])
 
@@ -35,10 +36,10 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
         <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>
-          Season totals · Top {data.length} players · Sourced from PlayHQ
+          {'Season totals · Top ' + data.length + ' players · Sourced from PlayHQ'}
         </p>
         <button onClick={copyTable} className="btn-ghost" style={{ fontSize: '0.78rem' }}>
-          {copied ? '✅ Copied!' : '📋 Copy Table'}
+          {copied ? 'Copied!' : 'Copy Table'}
         </button>
       </div>
 
@@ -82,7 +83,7 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
 
 export default function DashboardPage() {
   const { data: session } = useSession()
-  const [leagues, setLeagues]         = useState<any[]>([])
+  const [leagues, setLeagues]           = useState<any[]>([])
   const [activeLeague, setActiveLeague] = useState<string | null>(null)
 
   const loadLeagues = useCallback(async () => {
@@ -106,7 +107,8 @@ export default function DashboardPage() {
           Player Statistics
         </h1>
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', marginTop: '0.35rem' }}>
-          Welcome back, <strong style={{ color: '#fff' }}>{session?.user?.name}</strong>
+          {'Welcome back, '}
+          <strong style={{ color: '#fff' }}>{session?.user?.name}</strong>
           {' · Season totals synced daily from PlayHQ'}
         </p>
       </div>
@@ -118,7 +120,6 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          {/* League tabs */}
           <div className="tab-bar">
             {leagues.map(lg => (
               <button
@@ -130,8 +131,6 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
-
-          {/* Season stats table */}
           {activeLeague && <SeasonStats gradeId={activeLeague} />}
         </>
       )}
