@@ -68,7 +68,6 @@ export async function syncGradeStats(
       return { success: false, added: 0, updated: 0, message: 'No data returned' }
     }
 
-    // Top 20 only
     const results = (data.gradePlayerStatistics.results ?? []).slice(0, 20)
 
     for (const r of results) {
@@ -87,13 +86,15 @@ export async function syncGradeStats(
         if (val === 'BEST_PLAYER') bp    = stat.count
       }
 
+      const gameId = `${gradeId}-season`
+
       const vals = {
         grade_id:         gradeId,
         grade_name:       gradeName,
         season,
         round_number:     0,
         round_name:       'Season',
-        game_id:          `${gradeId}-season`,
+        game_id:          gameId,
         game_date:        syncedAt,
         team_id:          teamName,
         team_name:        teamName,
@@ -108,14 +109,14 @@ export async function syncGradeStats(
 
       try {
         const existing = await prisma.playerGame.findFirst({
-          where: { game_id: `${gradeId}-season`, player_id: playerId },
+          where: { game_id: gameId, player_id: playerId },
         })
         if (existing) {
           await prisma.playerGame.update({ where: { id: existing.id }, data: vals })
           updated++
         } else {
           await prisma.playerGame.create({
-            data: { player_id: playerId, game_id: `${gradeId}-season`, ...vals },
+            data: { player_id: playerId, ...vals },
           })
           added++
         }
