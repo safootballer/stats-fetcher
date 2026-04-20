@@ -68,6 +68,7 @@ export async function syncGradeStats(
       return { success: false, added: 0, updated: 0, message: 'No data returned' }
     }
 
+    // Top 20 only
     const results = (data.gradePlayerStatistics.results ?? []).slice(0, 20)
 
     for (const r of results) {
@@ -78,12 +79,13 @@ export async function syncGradeStats(
       const playerName = `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() || 'Unknown'
       const teamName   = r.team?.name ?? ''
 
+      // Parse all three stats from PlayHQ
       let goals = 0, games = 0, bp = 0
       for (const stat of r.statistics ?? []) {
         const val = stat.details?.value
-        if (val === 'GOAL_COUNT')  goals = stat.count
-        if (val === 'APPEARANCE')  games = stat.count
-        if (val === 'BEST_PLAYER') bp    = stat.count
+        if (val === 'GOAL_COUNT')  goals = stat.count  // Total goals this season
+        if (val === 'APPEARANCE')  games = stat.count  // Games played this season
+        if (val === 'BEST_PLAYER') bp    = stat.count  // BP awards this season
       }
 
       const gameId = `${gradeId}-season`
@@ -102,8 +104,8 @@ export async function syncGradeStats(
         player_name:      playerName,
         player_number:    String(r.ranking ?? ''),
         goals,
-        behinds:          0,
-        best_player_rank: bp,
+        behinds:          games,   // Store APPEARANCE (games played) in behinds column
+        best_player_rank: bp,      // Store BP award count
         synced_at:        syncedAt,
       }
 
