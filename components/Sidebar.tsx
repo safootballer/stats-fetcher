@@ -43,10 +43,9 @@ export function Sidebar({ user }: { user: any }) {
       position: 'sticky', top: 0, height: '100vh', overflowY: 'auto',
     }}>
 
-      {/* Logos */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-        <img src="/logo2.png" alt="SAFie" height={40} onError={e => (e.currentTarget.style.display='none')} />
-        <img src="/logo.png" alt="SA Footballer" height={40} onError={e => (e.currentTarget.style.display='none')} />
+      {/* Logo */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
+        <img src="/logo3.png" alt="SA Footballer" style={{ width: '100%', maxWidth: 200, height: 'auto' }} onError={e => (e.currentTarget.style.display='none')} />
       </div>
 
       {/* Brand */}
