@@ -76,7 +76,9 @@ query($participantID: ID!) {
 async function safePost(payload: object): Promise<any> {
   try {
     const res = await fetch(PLAYHQ_URL, {
-      method: 'POST', headers: HEADERS, body: JSON.stringify(payload),
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify(payload),
     })
     if (!res.ok) return null
     const data = await res.json()
@@ -84,40 +86,52 @@ async function safePost(payload: object): Promise<any> {
   } catch { return null }
 }
 
-async function resolvePlayerName(playerId: string, nameDirect: string | null): Promise<string> {
+async function resolvePlayerName(
+  playerId: string,
+  nameDirect: string | null,
+  playerNumber: string,
+): Promise<string> {
   const { prisma } = await import('@/lib/prisma')
 
-  // If we have name directly (anonymous/fill-in player), cache and return it
-  if (nameDirect) {
-    const existing = await prisma.playerProfile.findUnique({ where: { player_id: playerId } })
-    if (!existing) {
-      await prisma.playerProfile.create({
-        data: { player_id: playerId, player_name: nameDirect, fetched_at: new Date().toISOString() },
+  // Name came directly in GraphQL response
+  if (nameDirect && nameDirect.trim()) {
+    try {
+      await prisma.playerProfile.upsert({
+        where:  { player_id: playerId },
+        update: { player_name: nameDirect, fetched_at: new Date().toISOString() },
+        create: { player_id: playerId, player_name: nameDirect, fetched_at: new Date().toISOString() },
       })
-    }
-    return nameDirect
+    } catch { /* ignore */ }
+    return nameDirect.trim()
   }
 
-  // Check cache first
-  const cached = await prisma.playerProfile.findUnique({ where: { player_id: playerId } })
-  if (cached?.player_name) return cached.player_name
+  // Check cache
+  try {
+    const cached = await prisma.playerProfile.findUnique({ where: { player_id: playerId } })
+    if (cached?.player_name && !cached.player_name.startsWith('#')) return cached.player_name
+    if (cached) return playerNumber ? `#${playerNumber}` : `#${playerId.slice(0, 6)}`
+  } catch { /* ignore */ }
 
   // Fetch from PlayHQ profile API
-  const data = await safePost({ query: PROFILE_QUERY, variables: { participantID: playerId } })
-  let name: string | null = null
-  if (data?.discoverParticipant?.profile) {
-    const { firstName, lastName } = data.discoverParticipant.profile
-    name = `${firstName ?? ''} ${lastName ?? ''}`.trim() || null
+  try {
+    const data = await safePost({ query: PROFILE_QUERY, variables: { participantID: playerId } })
+    let name: string | null = null
+    if (data?.discoverParticipant?.profile) {
+      const { firstName, lastName } = data.discoverParticipant.profile
+      const full = `${firstName ?? ''} ${lastName ?? ''}`.trim()
+      if (full) name = full
+    }
+    try {
+      await prisma.playerProfile.upsert({
+        where:  { player_id: playerId },
+        update: { player_name: name, fetched_at: new Date().toISOString() },
+        create: { player_id: playerId, player_name: name, fetched_at: new Date().toISOString() },
+      })
+    } catch { /* ignore */ }
+    return name ?? (playerNumber ? `#${playerNumber}` : `#${playerId.slice(0, 6)}`)
+  } catch {
+    return playerNumber ? `#${playerNumber}` : `#${playerId.slice(0, 6)}`
   }
-
-  // Cache the result
-  if (cached) {
-    await prisma.playerProfile.update({ where: { player_id: playerId }, data: { player_name: name, fetched_at: new Date().toISOString() } })
-  } else {
-    await prisma.playerProfile.create({ data: { player_id: playerId, player_name: name, fetched_at: new Date().toISOString() } })
-  }
-
-  return name ?? `#${playerId.slice(0, 6)}`
 }
 
 export async function syncGradeStats(
@@ -143,8 +157,6 @@ export async function syncGradeStats(
         const gameId   = game.id
         const gameDate = game.date ?? ''
         const status   = game.status?.value
-
-        // Only process completed games
         if (!['FINAL', 'FORFEIT'].includes(status)) continue
 
         const home  = game.home ?? {}
@@ -159,7 +171,6 @@ export async function syncGradeStats(
           const players     = sideData.players ?? []
           const bestPlayers = sideData.bestPlayers ?? []
 
-          // Build best player map
           const bpMap: Record<string, number> = {}
           for (const bp of bestPlayers) {
             const pid = bp.participant?.id
@@ -171,13 +182,10 @@ export async function syncGradeStats(
             const playerId   = playerObj.id ?? ''
             const nameDirect = playerObj.name ?? null
             const playerNum  = pe.playerNumber ?? ''
-
             if (!playerId) continue
 
-            // Resolve real name
-            const playerName = await resolvePlayerName(playerId, nameDirect)
+            const playerName = await resolvePlayerName(playerId, nameDirect, playerNum)
 
-            // Parse stats
             let goals = 0, behinds = 0
             for (const stat of pe.statistics ?? []) {
               if (stat.type.value === '6_POINT_SCORE') goals   = stat.count
@@ -185,7 +193,6 @@ export async function syncGradeStats(
             }
 
             const bpRank = bpMap[playerId] ?? 0
-
             const vals = {
               grade_id: gradeId, grade_name: gradeName, season,
               round_number: roundNumber, round_name: roundName,
@@ -195,22 +202,22 @@ export async function syncGradeStats(
               best_player_rank: bpRank, synced_at: syncedAt,
             }
 
-            const existing = await prisma.playerGame.findFirst({
-              where: { game_id: gameId, player_id: playerId, team_id: teamId },
-            })
-
-            if (existing) {
-              await prisma.playerGame.update({ where: { id: existing.id }, data: vals })
-              updated++
-            } else {
-              await prisma.playerGame.create({ data: { player_id: playerId, game_id: gameId, ...vals } })
-              added++
-            }
+            try {
+              const existing = await prisma.playerGame.findFirst({
+                where: { game_id: gameId, player_id: playerId, team_id: teamId },
+              })
+              if (existing) {
+                await prisma.playerGame.update({ where: { id: existing.id }, data: vals })
+                updated++
+              } else {
+                await prisma.playerGame.create({ data: { player_id: playerId, game_id: gameId, ...vals } })
+                added++
+              }
+            } catch { /* skip on DB error */ }
           }
         }
       }
     }
-
     return { success: true, added, updated, message: `${added} added, ${updated} updated` }
   } catch (e: any) {
     return { success: false, added, updated, message: e.message }
@@ -222,7 +229,9 @@ export async function syncAllStats(): Promise<{ name: string; success: boolean; 
   const leagues = await prisma.league.findMany({ where: { sync_enabled: 1 } })
   const results = []
   for (const lg of leagues) {
+    console.log(`[SYNC] Starting: ${lg.grade_name}`)
     const res = await syncGradeStats(lg.grade_id, lg.grade_name ?? '', lg.season ?? '')
+    console.log(`[SYNC] ${res.success ? 'OK' : 'FAIL'} ${lg.grade_name}: ${res.message}`)
     results.push({ name: lg.grade_name ?? lg.grade_id, success: res.success, message: res.message })
   }
   return results
