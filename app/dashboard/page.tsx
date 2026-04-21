@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import { getLeagueCategory, LEVEL1_ORDER, LEVEL2_ORDER } from '@/lib/leagueMap'
 
 function SeasonStats({ gradeId }: { gradeId: string }) {
   const [data, setData]       = useState<any[]>([])
@@ -42,14 +43,12 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
           {copied ? 'Copied!' : 'Copy Table'}
         </button>
       </div>
-
       <div className="glass-card" style={{ overflow: 'hidden' }}>
         <table className="stats-table">
           <thead>
             <tr>
               <th style={{ width: 40 }}>#</th>
-              <th>Player</th>
-              <th>Team</th>
+              <th>Player</th><th>Team</th>
               <th title="Games Played">GP</th>
               <th title="Total Goals">Goals</th>
               <th title="Best Player Awards">BP</th>
@@ -64,7 +63,7 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
                 <td style={{ fontWeight: i < 3 ? 700 : 400 }}>{r.player}</td>
                 <td style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.82rem' }}>{r.team}</td>
                 <td>{r.games}</td>
-                <td style={{ fontWeight: 700, color: i === 0 ? '#e6fe00' : i < 3 ? '#fff' : 'rgba(255,255,255,0.85)' }}>{r.goals}</td>
+                <td style={{ fontWeight: 700, color: i === 0 ? '#e6fe00' : 'rgba(255,255,255,0.85)' }}>{r.goals}</td>
                 <td style={{ color: r.bp > 0 ? '#2ca3ee' : 'rgba(255,255,255,0.25)', fontWeight: r.bp > 0 ? 700 : 400 }}>
                   {r.bp > 0 ? r.bp : '-'}
                 </td>
@@ -83,32 +82,77 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
 
 export default function DashboardPage() {
   const { data: session } = useSession()
-  const [leagues, setLeagues]           = useState<any[]>([])
-  const [activeLeague, setActiveLeague] = useState<string | null>(null)
+  const [leagues, setLeagues]   = useState<any[]>([])
+  const [level1, setLevel1]     = useState<string>('SANFL')
+  const [level2, setLevel2]     = useState<string | null>(null)
+  const [activeGradeId, setActiveGradeId] = useState<string | null>(null)
 
   const loadLeagues = useCallback(async () => {
     const data = await fetch('/api/stats?type=leagues').then(r => r.json())
-    const list = Array.isArray(data) ? data : []
-    setLeagues(list)
-    if (list.length > 0 && !activeLeague) setActiveLeague(list[0].grade_id)
-  }, [activeLeague])
+    setLeagues(Array.isArray(data) ? data : [])
+  }, [])
 
   useEffect(() => { loadLeagues() }, [])
-
   useEffect(() => {
     window.addEventListener('stats:synced', loadLeagues)
     return () => window.removeEventListener('stats:synced', loadLeagues)
   }, [loadLeagues])
 
+  useEffect(() => {
+    const l2options = getLevel2Options(level1)
+    setLevel2(l2options[0] ?? null)
+    setActiveGradeId(null)
+  }, [level1, leagues])
+
+  useEffect(() => {
+    if (!level2) return
+    const grades = getGradesForLevel2(level1, level2)
+    if (grades.length > 0) setActiveGradeId(grades[0].grade_id)
+  }, [level2])
+
+  function getLevel2Options(l1: string): string[] {
+    const order = LEVEL2_ORDER[l1] ?? []
+    const available = new Set(
+      leagues
+        .filter(lg => getLeagueCategory(lg.grade_id).level1 === l1)
+        .map(lg => getLeagueCategory(lg.grade_id).level2)
+    )
+    return order.filter(l2 => available.has(l2))
+  }
+
+  function getGradesForLevel2(l1: string, l2: string) {
+    return leagues
+      .filter(lg => {
+        const cat = getLeagueCategory(lg.grade_id)
+        return cat.level1 === l1 && cat.level2 === l2
+      })
+      .sort((a, b) => getLeagueCategory(a.grade_id).sortOrder - getLeagueCategory(b.grade_id).sortOrder)
+  }
+
+  const level2Options = getLevel2Options(level1)
+  const gradeOptions  = level2 ? getGradesForLevel2(level1, level2) : []
+
+  const tabStyle = (active: boolean, color = '#2ca3ee') => ({
+    padding: '0.5rem 1.125rem', borderRadius: 8,
+    fontSize: '0.82rem', fontWeight: active ? 700 : 500,
+    cursor: 'pointer',
+    border: active ? `1.5px solid ${color}` : '1.5px solid rgba(44,163,238,0.2)',
+    background: active ? 'rgba(44,163,238,0.15)' : 'transparent',
+    color: active ? color : 'rgba(255,255,255,0.55)',
+    transition: 'all 0.15s',
+    fontFamily: "'Barlow Condensed', sans-serif",
+    letterSpacing: '0.04em',
+    whiteSpace: 'nowrap' as const,
+  })
+
   return (
-    <div className="fade-up" style={{ maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ marginBottom: '1.75rem' }}>
+    <div className="fade-up" style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: '2.25rem', color: '#2ca3ee', margin: 0 }}>
           Player Statistics
         </h1>
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', marginTop: '0.35rem' }}>
-          {'Welcome back, '}
-          <strong style={{ color: '#fff' }}>{session?.user?.name}</strong>
+          {'Welcome back, '}<strong style={{ color: '#fff' }}>{session?.user?.name}</strong>
           {' · Season totals synced daily from PlayHQ'}
         </p>
       </div>
@@ -120,18 +164,42 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          <div className="tab-bar">
-            {leagues.map(lg => (
-              <button
-                key={lg.grade_id}
-                className={`tab-btn ${activeLeague === lg.grade_id ? 'active' : ''}`}
-                onClick={() => setActiveLeague(lg.grade_id)}
-              >
-                {lg.grade_name}
+          {/* Level 1 */}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            {LEVEL1_ORDER.filter(l1 => getLevel2Options(l1).length > 0).map(l1 => (
+              <button key={l1} onClick={() => setLevel1(l1)} style={tabStyle(level1 === l1, '#2ca3ee')}>
+                {l1}
               </button>
             ))}
           </div>
-          {activeLeague && <SeasonStats gradeId={activeLeague} />}
+
+          {/* Level 2 */}
+          {level2Options.length > 0 && (
+            <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1rem', paddingLeft: '0.5rem', borderLeft: '3px solid rgba(44,163,238,0.3)' }}>
+              {level2Options.map(l2 => (
+                <button key={l2} onClick={() => setLevel2(l2)} style={tabStyle(level2 === l2, '#e6fe00')}>
+                  {l2}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Level 3 */}
+          {gradeOptions.length > 0 && (
+            <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginBottom: '1.5rem', paddingLeft: '1rem', borderLeft: '3px solid rgba(230,254,0,0.2)' }}>
+              {gradeOptions.map(lg => {
+                const cat = getLeagueCategory(lg.grade_id)
+                return (
+                  <button key={lg.grade_id} onClick={() => setActiveGradeId(lg.grade_id)}
+                    style={tabStyle(activeGradeId === lg.grade_id, '#4ade80')}>
+                    {cat.level3}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {activeGradeId && <SeasonStats gradeId={activeGradeId} />}
         </>
       )}
     </div>
