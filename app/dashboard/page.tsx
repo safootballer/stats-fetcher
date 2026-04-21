@@ -7,9 +7,12 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
   const [data, setData]       = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied]   = useState(false)
+  const [publishing, setPublishing]   = useState(false)
+  const [publishMsg, setPublishMsg]   = useState<{ type: string; text: string } | null>(null)
 
   useEffect(() => {
     setLoading(true)
+    setPublishMsg(null)
     fetch(`/api/stats?type=season&gradeId=${gradeId}`)
       .then(r => r.json())
       .then(d => setData(Array.isArray(d) ? d : []))
@@ -24,6 +27,27 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  async function publishToWebsite() {
+    setPublishing(true)
+    setPublishMsg(null)
+    try {
+      const res  = await fetch('/api/publish-goal-kickers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gradeId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setPublishMsg({ type: 'success', text: `✅ Published to website: ${data.title}` })
+      } else {
+        setPublishMsg({ type: 'error', text: `❌ ${data.error ?? 'Publish failed'}` })
+      }
+    } catch (e: any) {
+      setPublishMsg({ type: 'error', text: `❌ ${e.message}` })
+    }
+    setPublishing(false)
+  }
+
   if (loading) return <p style={{ color: 'rgba(255,255,255,0.4)', padding: '1rem' }}>Loading...</p>
 
   if (!data.length) return (
@@ -35,14 +59,44 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
+      {/* Action buttons */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>
           {'Season totals · Top ' + data.length + ' players · Sourced from PlayHQ'}
         </p>
-        <button onClick={copyTable} className="btn-ghost" style={{ fontSize: '0.78rem' }}>
-          {copied ? 'Copied!' : 'Copy Table'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={copyTable} className="btn-ghost" style={{ fontSize: '0.78rem' }}>
+            {copied ? '✅ Copied!' : '📋 Copy Table'}
+          </button>
+          <button
+            onClick={publishToWebsite}
+            disabled={publishing}
+            style={{
+              background: publishing ? 'rgba(230,254,0,0.3)' : '#e6fe00',
+              color: '#000', border: 'none', borderRadius: 8,
+              padding: '0.45rem 1rem', fontFamily: "'Barlow Condensed', sans-serif",
+              fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.06em',
+              textTransform: 'uppercase', cursor: publishing ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {publishing ? 'Publishing...' : '🌐 Publish to Website'}
+          </button>
+        </div>
       </div>
+
+      {/* Publish message */}
+      {publishMsg && (
+        <div style={{
+          marginBottom: '1rem', padding: '0.75rem 1rem', borderRadius: 8, fontSize: '0.85rem',
+          background: publishMsg.type === 'success' ? 'rgba(5,46,22,0.8)' : 'rgba(45,0,0,0.8)',
+          border: `1px solid ${publishMsg.type === 'success' ? '#4ade80' : '#f87171'}`,
+          color: publishMsg.type === 'success' ? '#4ade80' : '#f87171',
+        }}>
+          {publishMsg.text}
+        </div>
+      )}
+
+      {/* Stats table */}
       <div className="glass-card" style={{ overflow: 'hidden' }}>
         <table className="stats-table">
           <thead>
@@ -82,9 +136,9 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
 
 export default function DashboardPage() {
   const { data: session } = useSession()
-  const [leagues, setLeagues]   = useState<any[]>([])
-  const [level1, setLevel1]     = useState<string>('SANFL')
-  const [level2, setLevel2]     = useState<string | null>(null)
+  const [leagues, setLeagues]             = useState<any[]>([])
+  const [level1, setLevel1]               = useState<string>('SANFL')
+  const [level2, setLevel2]               = useState<string | null>(null)
   const [activeGradeId, setActiveGradeId] = useState<string | null>(null)
 
   const loadLeagues = useCallback(async () => {
