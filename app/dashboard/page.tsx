@@ -229,7 +229,7 @@ export default function DashboardPage() {
             disabled={publishing}
             className="update-all-btn"
           >
-            {publishing ? '⏳ Updating...' : '🌐 Update All Tables'}
+            {publishing ? '⏳ Updating...' : '🌐 Update All Tables on Website'}
           </button>
           {publishMsg && (
             <div style={{
