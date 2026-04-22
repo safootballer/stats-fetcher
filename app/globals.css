@@ -12,7 +12,7 @@
 html { scroll-behavior: smooth; }
 
 body {
-  background: #000;
+  background: #000 !important;
   background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(44,163,238,0.15) 0%, transparent 60%);
   background-attachment: fixed;
   min-height: 100vh;
@@ -106,17 +106,6 @@ body {
 .tab-btn:hover { border-color: var(--blue); color: #fff; }
 .tab-btn.active { background: rgba(44,163,238,0.15); border-color: var(--blue); color: var(--blue); font-weight: 700; }
 
-.sub-tab-bar { display: flex; gap: 0.25rem; margin-bottom: 1.25rem; }
-.sub-tab-btn {
-  padding: 0.4rem 1rem; border-radius: 7px; font-size: 0.78rem; font-weight: 600;
-  cursor: pointer; border: 1px solid transparent;
-  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.5); transition: all 0.15s;
-  font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.04em;
-}
-.sub-tab-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
-.sub-tab-btn.active { background: rgba(230,254,0,0.12); border-color: rgba(230,254,0,0.3); color: var(--yellow); font-weight: 700; }
-
-/* Stats table */
 .stats-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .stats-table thead th {
   background: rgba(44,163,238,0.1); color: rgba(255,255,255,0.5);
@@ -131,8 +120,6 @@ body {
 }
 .stats-table tbody td:not(:first-child):not(:nth-child(2)) { text-align: center; }
 .stats-table tbody tr:hover td { background: rgba(44,163,238,0.04); }
-.stats-table tbody tr:first-child td { color: #fff; }
-.stats-table tbody tr:first-child td:nth-child(4) { color: var(--yellow); font-weight: 800; }
 
 .rank-num {
   display: inline-flex; align-items: center; justify-content: center;
@@ -142,3 +129,72 @@ body {
 }
 .rank-num.gold   { background: rgba(230,254,0,0.2);  color: var(--yellow); }
 .rank-num.silver { background: rgba(44,163,238,0.2); color: var(--blue); }
+
+.update-all-btn {
+  position: relative;
+  width: 180px;
+  height: 48px;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: 0.2s ease;
+}
+
+.update-all-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  left: -4px;
+  top: -1px;
+  margin: auto;
+  width: 188px;
+  height: 56px;
+  border-radius: 10px;
+  background: linear-gradient(-45deg, #e81cff 0%, #40c9ff 100%);
+  z-index: -2;
+  pointer-events: none;
+  transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.update-all-btn::after {
+  content: '';
+  z-index: -1;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(-45deg, #fc00ff 0%, #00dbde 100%);
+  transform: scale(0.95);
+  filter: blur(20px);
+}
+
+.update-all-btn:hover::after {
+  filter: blur(30px);
+}
+
+.update-all-btn:hover::before {
+  transform: rotate(-180deg);
+}
+
+.update-all-btn:active::before {
+  scale: 0.7;
+}
+
+.update-all-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.update-all-btn:disabled::before,
+.update-all-btn:disabled::after {
+  filter: blur(10px);
+  transform: none;
+}

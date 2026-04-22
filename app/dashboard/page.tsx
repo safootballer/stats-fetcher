@@ -28,8 +28,7 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
   }
 
   async function publishToWebsite() {
-    setPublishing(true)
-    setPublishMsg(null)
+    setPublishing(true); setPublishMsg(null)
     try {
       const res  = await fetch('/api/publish-goal-kickers', {
         method: 'POST',
@@ -37,11 +36,8 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
         body: JSON.stringify({ gradeId }),
       })
       const data = await res.json()
-      if (data.success) {
-        setPublishMsg({ type: 'success', text: `✅ Published to website: ${data.title}` })
-      } else {
-        setPublishMsg({ type: 'error', text: `❌ ${data.error ?? 'Publish failed'}` })
-      }
+      if (data.success) setPublishMsg({ type: 'success', text: `✅ Published to website: ${data.title}` })
+      else setPublishMsg({ type: 'error', text: `❌ ${data.error ?? 'Publish failed'}` })
     } catch (e: any) {
       setPublishMsg({ type: 'error', text: `❌ ${e.message}` })
     }
@@ -59,7 +55,6 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
 
   return (
     <div>
-      {/* Action buttons */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>
           {'Top ' + data.length + ' goal kickers · Sourced from PlayHQ'}
@@ -68,23 +63,18 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
           <button onClick={copyTable} className="btn-ghost" style={{ fontSize: '0.78rem' }}>
             {copied ? '✅ Copied!' : '📋 Copy Table'}
           </button>
-          <button
-            onClick={publishToWebsite}
-            disabled={publishing}
-            style={{
-              background: publishing ? 'rgba(230,254,0,0.3)' : '#e6fe00',
-              color: '#000', border: 'none', borderRadius: 8,
-              padding: '0.45rem 1rem', fontFamily: "'Barlow Condensed', sans-serif",
-              fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.06em',
-              textTransform: 'uppercase', cursor: publishing ? 'not-allowed' : 'pointer',
-            }}
-          >
+          <button onClick={publishToWebsite} disabled={publishing} style={{
+            background: publishing ? 'rgba(230,254,0,0.3)' : '#e6fe00',
+            color: '#000', border: 'none', borderRadius: 8,
+            padding: '0.45rem 1rem', fontFamily: "'Barlow Condensed', sans-serif",
+            fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.06em',
+            textTransform: 'uppercase', cursor: publishing ? 'not-allowed' : 'pointer',
+          }}>
             {publishing ? 'Publishing...' : '🌐 Publish to Website'}
           </button>
         </div>
       </div>
 
-      {/* Publish message */}
       {publishMsg && (
         <div style={{
           marginBottom: '1rem', padding: '0.75rem 1rem', borderRadius: 8, fontSize: '0.85rem',
@@ -96,7 +86,6 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
         </div>
       )}
 
-      {/* Stats table */}
       <div className="glass-card" style={{ overflow: 'hidden' }}>
         <table className="stats-table">
           <thead>
@@ -137,6 +126,8 @@ export default function DashboardPage() {
   const [level1, setLevel1]               = useState<string>('SANFL')
   const [level2, setLevel2]               = useState<string | null>(null)
   const [activeGradeId, setActiveGradeId] = useState<string | null>(null)
+  const [publishing, setPublishing]       = useState(false)
+  const [publishMsg, setPublishMsg]       = useState<{ type: string; text: string } | null>(null)
 
   const loadLeagues = useCallback(async () => {
     const data = await fetch('/api/stats?type=leagues').then(r => r.json())
@@ -180,6 +171,26 @@ export default function DashboardPage() {
       .sort((a, b) => getLeagueCategory(a.grade_id).sortOrder - getLeagueCategory(b.grade_id).sortOrder)
   }
 
+  async function publishAll() {
+    setPublishing(true); setPublishMsg(null)
+    try {
+      const res  = await fetch('/api/publish-all-goal-kickers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setPublishMsg({ type: 'success', text: `✅ Updated ${data.summary.succeeded} tables on website${data.summary.failed > 0 ? `, ${data.summary.failed} failed` : ''}` })
+      } else {
+        setPublishMsg({ type: 'error', text: `❌ ${data.error ?? 'Failed'}` })
+      }
+    } catch (e: any) {
+      setPublishMsg({ type: 'error', text: `❌ ${e.message}` })
+    }
+    setPublishing(false)
+  }
+
   const level2Options = getLevel2Options(level1)
   const gradeOptions  = level2 ? getGradesForLevel2(level1, level2) : []
 
@@ -198,14 +209,39 @@ export default function DashboardPage() {
 
   return (
     <div className="fade-up" style={{ maxWidth: 1200, margin: '0 auto' }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: '2.25rem', color: '#2ca3ee', margin: 0 }}>
-          Goal Kickers
-        </h1>
-        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', marginTop: '0.35rem' }}>
-          {'Welcome back, '}<strong style={{ color: '#fff' }}>{session?.user?.name}</strong>
-          {' · Top 20 goal kickers per league · Synced daily from PlayHQ'}
-        </p>
+
+      {/* Header */}
+      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: '2.25rem', color: '#2ca3ee', margin: 0 }}>
+            Goal Kickers
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', marginTop: '0.35rem' }}>
+            {'Welcome back, '}<strong style={{ color: '#fff' }}>{session?.user?.name}</strong>
+            {' · Top 20 goal kickers per league · Synced daily from PlayHQ'}
+          </p>
+        </div>
+
+        {/* Update All Tables button */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+          <button
+            onClick={publishAll}
+            disabled={publishing}
+            className="update-all-btn"
+          >
+            {publishing ? '⏳ Updating...' : '🌐 Update All Tables'}
+          </button>
+          {publishMsg && (
+            <div style={{
+              padding: '0.5rem 0.875rem', borderRadius: 8, fontSize: '0.8rem',
+              background: publishMsg.type === 'success' ? 'rgba(5,46,22,0.8)' : 'rgba(45,0,0,0.8)',
+              border: `1px solid ${publishMsg.type === 'success' ? '#4ade80' : '#f87171'}`,
+              color: publishMsg.type === 'success' ? '#4ade80' : '#f87171',
+            }}>
+              {publishMsg.text}
+            </div>
+          )}
+        </div>
       </div>
 
       {leagues.length === 0 ? (
