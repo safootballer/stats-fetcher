@@ -4,11 +4,11 @@ import { useSession } from 'next-auth/react'
 import { getLeagueCategory, LEVEL1_ORDER, LEVEL2_ORDER } from '@/lib/leagueMap'
 
 function SeasonStats({ gradeId }: { gradeId: string }) {
-  const [data, setData]       = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [copied, setCopied]   = useState(false)
-  const [publishing, setPublishing]   = useState(false)
-  const [publishMsg, setPublishMsg]   = useState<{ type: string; text: string } | null>(null)
+  const [data, setData]             = useState<any[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [copied, setCopied]         = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [publishMsg, setPublishMsg] = useState<{ type: string; text: string } | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -20,8 +20,8 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
   }, [gradeId])
 
   function copyTable() {
-    const lines = [['Player', 'Team', 'Games Played', 'Total Goals', 'Best Player'].join('\t')]
-    data.forEach(r => lines.push([r.player, r.team, r.games, r.goals, r.bp].join('\t')))
+    const lines = [['Rank', 'Player', 'Team', 'Games Played', 'Goals'].join('\t')]
+    data.forEach((r, i) => lines.push([i + 1, r.player, r.team, r.games, r.goals].join('\t')))
     navigator.clipboard.writeText(lines.join('\n'))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -62,7 +62,7 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
       {/* Action buttons */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>
-          {'Season totals · Top ' + data.length + ' players · Sourced from PlayHQ'}
+          {'Top ' + data.length + ' goal kickers · Sourced from PlayHQ'}
         </p>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button onClick={copyTable} className="btn-ghost" style={{ fontSize: '0.78rem' }}>
@@ -102,10 +102,10 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
           <thead>
             <tr>
               <th style={{ width: 40 }}>#</th>
-              <th>Player</th><th>Team</th>
+              <th>Player</th>
+              <th>Team</th>
               <th title="Games Played">GP</th>
               <th title="Total Goals">Goals</th>
-              <th title="Best Player Awards">BP</th>
             </tr>
           </thead>
           <tbody>
@@ -118,15 +118,12 @@ function SeasonStats({ gradeId }: { gradeId: string }) {
                 <td style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.82rem' }}>{r.team}</td>
                 <td>{r.games}</td>
                 <td style={{ fontWeight: 700, color: i === 0 ? '#e6fe00' : 'rgba(255,255,255,0.85)' }}>{r.goals}</td>
-                <td style={{ color: r.bp > 0 ? '#2ca3ee' : 'rgba(255,255,255,0.25)', fontWeight: r.bp > 0 ? 700 : 400 }}>
-                  {r.bp > 0 ? r.bp : '-'}
-                </td>
               </tr>
             ))}
           </tbody>
         </table>
         <div style={{ padding: '0.625rem 1rem', borderTop: '1px solid rgba(44,163,238,0.08)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', display: 'flex', justifyContent: 'space-between' }}>
-          <span>GP = Games Played · BP = Best Player Awards</span>
+          <span>GP = Games Played</span>
           <span>Copy Table to paste into Excel or Google Sheets</span>
         </div>
       </div>
@@ -203,11 +200,11 @@ export default function DashboardPage() {
     <div className="fade-up" style={{ maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: '2.25rem', color: '#2ca3ee', margin: 0 }}>
-          Player Statistics
+          Goal Kickers
         </h1>
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', marginTop: '0.35rem' }}>
           {'Welcome back, '}<strong style={{ color: '#fff' }}>{session?.user?.name}</strong>
-          {' · Season totals synced daily from PlayHQ'}
+          {' · Top 20 goal kickers per league · Synced daily from PlayHQ'}
         </p>
       </div>
 
